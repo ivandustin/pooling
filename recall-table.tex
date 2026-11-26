@@ -15,4 +15,4 @@ Pairs & Frequency & Pooler & Transformer & Pooler & Transformer \\
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:recall-load} shows that the Transformer has higher mean accuracy at 1,000 updates, but the pooler is slightly ahead at 3,000 updates. Mean accuracy falls as the number of pairs grows for both models. Neither beats the query-blind frequency rule on average at any load. This is not evidence that the models literally use that rule. It shows that their accuracy at this training budget does not establish reliable lookup. In particular, the five-pair result in this mixture is not a direct replication of the earlier five-pair task: the context is longer, the padding is visible, the training examples mix several loads, and training is much shorter. The experiment does not establish a hard capacity limit for either model.
+Neither model beats the frequency rule on average at any load. This does not establish that either model uses the rule.

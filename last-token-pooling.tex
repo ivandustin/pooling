@@ -14,11 +14,11 @@
 \begin{document}
 \maketitle
 \begin{abstract}
-How much can a small language model do if it stores its context in just one vector? We test a model that turns each earlier token and its position into a vector, adds those vectors, and uses the last token to decide which channels to emphasize. It uses no token-to-token attention. On a one-minute CPU budget, we compare three models of about 100,000 parameters. On Tiny Shakespeare, the pooler reaches mean test perplexity 7.31, versus 8.02 for AFT-simple and 8.31 for a two-block Transformer. On Alice, AFT-simple leads at 6.48, versus 6.70 for the pooler and 6.69 for the Transformer. Lower perplexity means better probabilities for the correct next characters. The pooler makes the most correct top guesses on both texts and completes about 2.9 times as many updates as AFT-simple. In a separate comparison after 50,000 updates, the Transformer reference has lower perplexity. In synthetic recall, the pooler gets every key right in 73.67\% of ten-pair memories after five minutes, but in only one of 12,288 twenty-pair trials. These results describe a small model on a short CPU budget.
+We study a small language model that adds position-aware token vectors and uses the last token to gate the sum, without token-to-token attention. With about 100,000 parameters and one minute of CPU training, the pooler attains test perplexity 7.31 on Tiny Shakespeare, compared with 8.02 for AFT-simple and 8.31 for a two-block Transformer. On Alice, AFT-simple leads at 6.48, versus 6.70 for the pooler and 6.69 for the Transformer. The pooler has the highest next-character accuracy on both texts and completes about 2.9 times as many updates as AFT-simple. The Transformer has lower perplexity in a separate 50,000-update comparison. After five minutes of training on mixed recall loads, the pooler retrieves every key in 73.67\% of ten-pair trials, but in only one of 12,288 twenty-pair trials.
 \end{abstract}
 
 \section{Introduction}
-Suppose a model reads a list of key--value pairs and then sees a key. Can it find the right value after adding the whole list into one vector? That is the trade-off we study. A sum is cheap to build, but facts in the sum can get in one another's way. Our model uses the last token to adjust the weight of each coordinate in the sum. In recall, the last token is the key being looked up. In text, it is the last character the model has seen.
+Suppose a model reads a list of key--value pairs and then sees a key. Can it find the right value after adding the whole list into one vector? That is the trade-off we study. Summing the vectors is simple, but it may make individual associations harder to recover. Our model uses the last token to adjust the weight of each coordinate in the sum. In recall, the last token is the key being looked up. In text, it is the last character the model has seen.
 
 Our main question is practical: if small models get one minute on the same CPU and about the same number of parameters, which makes better predictions? We also show results after the same number of updates. These are different tests because one model can fit more updates into a minute. Finally, we vary the number of stored pairs while keeping the input length fixed.
 
@@ -60,19 +60,19 @@ Causal Transformer & 60.07 & 6,340 & \pmv{40.32}{0.50} & \pmv{7.68}{0.13} \\
 \end{tabular}
 \end{table}
 
-The pooler completes 2.25 times as many updates and improves held-out accuracy by 2.78 percentage points (computed before rounding). Its perplexity is lower in each of the three paired runs: 7.28 vs. 7.54, 7.42 vs. 7.76, and 7.48 vs. 7.75. This supports an advantage for the measured implementation and CPU budget. This test does not tell us which operation accounts for the speed difference. It does not match the number of floating-point operations.
+The pooler completes 2.25 times as many updates and improves held-out accuracy by 2.78 percentage points (computed before rounding). Its perplexity is lower in each of the three paired runs: 7.28 vs. 7.54, 7.42 vs. 7.76, and 7.48 vs. 7.75. The comparison matches elapsed time, not floating-point operations, and does not isolate the source of the speed difference.
 
 \paragraph{Check on the full test split.} We independently reload all six saved checkpoints, verify that they reproduce the sampled results, and score every valid context and target in the same test split (111,508 windows). The pooler reaches \pmv{43.12}{0.37}\% accuracy and \pmv{7.31}{0.02} perplexity, versus \pmv{40.50}{0.38}\% and \pmv{7.71}{0.03} for the Transformer. The pooler leads in each seed. This check removes dependence on which windows were sampled, but it is not a test on a second corpus.
 
-\subsection{Comparison with AFT-simple on a second text}
+\subsection{Three models on two texts}
 We train fresh models under the same one-minute protocol on Tiny Shakespeare and on \emph{Alice's Adventures in Wonderland} \cite{alice}. The second corpus contains 144,348 characters after removing the Project Gutenberg front and back matter and normalizing line endings. We use a contiguous 80/10/10 split, a training vocabulary plus an unknown-character symbol, and score all 14,403 valid test windows. The Shakespeare split and vocabulary are unchanged. All three models are run again for each seed on the same CPU, with model order rotated across seeds. We report these new runs separately from Table~\ref{tab:equal}; timing across the two sessions is not a controlled comparison.
 
-The AFT-simple baseline uses the causal mixer of Zhai et al. in the same two-block pre-normalized residual design as our Transformer. At each position it weights each value channel by the exponential of the corresponding key channel, computes the normalized average up to that position, then multiplies it by a sigmoid gate from the current token. It has the same projection shapes, fixed sinusoidal positions, and parameter count as the softmax baseline. This tests the mixer in our setting, rather than reproducing the larger models in the original paper. Model sizes range from 99,951 to 99,981 parameters.
+The AFT-simple baseline uses the causal mixer of Zhai et al. in the same two-block pre-normalized residual design as our Transformer. At each position it weights each value channel by the exponential of the corresponding key channel, computes the normalized average up to that position, then multiplies it by a sigmoid gate from the current token. It has the same projection shapes, fixed sinusoidal positions, and parameter count as the softmax baseline. This comparison uses our small-model setup, not the original AFT training protocol. Model sizes range from 99,951 to 99,981 parameters.
 
 \input{aft-table.tex}
 
 \begin{samepage}
-The pooler has lower perplexity than AFT-simple on Shakespeare in all three seeds, and higher perplexity on Alice in all three seeds. It has the highest mean accuracy on both texts, so its top guesses can be right more often even when its probabilities are worse overall. It completes about 2.9 times as many updates as AFT-simple in the same minute on both texts. These results separate speed from prediction quality: more updates in a minute do not guarantee better probabilities on a different corpus.
+The pooler has lower perplexity than AFT-simple on Shakespeare in all three seeds, and higher perplexity on Alice in all three seeds. It has the highest mean accuracy on both texts, so its top guesses can be right more often even when its probabilities are worse overall. It completes about 2.9 times as many updates as AFT-simple on both texts.
 
 \end{samepage}
 
@@ -98,22 +98,16 @@ Character perplexity & \pmv{6.92}{0.13} & \pmv{6.69}{0.12} \\
 
 \section{Recall under increased memory load}
 \label{sec:stress}
-We train a separate pair of models from scratch on a mixture of 5, 10, and 20 associations, sampled uniformly for each training example. Every input has length 41: the active key--value pairs come first, unused slots are filled with a dedicated padding token, and the query always occupies the final position. Padding tokens are visible to both models. Keys are sampled without replacement from 32 symbols, values are independent draws from 16 disjoint symbols, and the query uniformly selects a stored key. This holds input length and query location constant across loads, but changes both the number of associations and the amount of padding. It is an in-distribution load test rather than a test of length extrapolation. Evaluation uses 16,384 fresh examples per load, shared across architectures and seeds. The pooler uses 99,732 parameters (readout hidden width 180). The Transformer uses 99,838 parameters (feed-forward width 207). Model widths, Transformer depth, and position encodings otherwise follow the earlier configurations. As a check for answers that do not require recall, we also score a rule that ignores the query and always picks the most common stored value, breaking ties by the lowest symbol index. We report the preselected 3,000-update endpoint using the same Adam setting and batch size as the other experiments.
+Each training example contains 5, 10, or 20 key--value pairs, chosen uniformly. Every input has 41 tokens: the pairs come first, followed by padding and then the query. Keys are drawn without replacement from 32 symbols, values are drawn independently from 16 disjoint symbols, and the query selects a stored key uniformly. Input length and query position stay fixed, so increasing the load also reduces padding. The evaluated loads occur in training.
 
-\input{recall-table.tex}
-
-\paragraph{Does the model use the query?}
-At 3,000 updates, we ask every stored key in the first 4,096 test memories at each load, changing only the query token. This repeat run reproduces the original single-query scores. Both models change their answer for some memories, but neither gets every key right in any tested memory across the three seeds. For five pairs, mean accuracy is 30.84\% for the pooler and 30.06\% for the Transformer, compared with 30.74\% for a rule that sees the memory but not the query. That rule picks the most common stored value and is optimal without the query when all keys are asked. At 10 and 20 pairs, both models score below that rule. Changing the answer is evidence that the query matters, but not that either model retrieves the right value reliably.
-
-\subsection{Three-way recall with the same time budget}
-On the same mixed-load task, we train the pooler, AFT-simple, and the softmax Transformer from scratch for 60 seconds each. The AFT-simple baseline uses the same two-block design as in the language comparison. The models have 99,732, 99,838, and 99,838 parameters, respectively. Each seed uses the same stream of training examples across models; faster models see more of it. We time the same operations as in the language tests. At each load, we ask every key in 4,096 held-out memories and measure per-key accuracy and the fraction of memories with every answer right.
+We train the pooler (99,732 parameters), AFT-simple, and the Transformer (99,838 each) from scratch for 60 seconds each. The models see padding tokens, use the same timing protocol as the language trials, and receive the same training stream within each seed; faster models see more examples. At each load and for each seed, we ask every key in the same 4,096 held-out memories. We report the fraction of keys answered correctly and the fraction of memories with every key right. A rule that ignores the query picks the most common stored value, breaking ties by lowest symbol index. In a separate 3,000-update comparison, neither the pooler nor the Transformer showed reliable recall (Appendix~\ref{app:early-recall}).
 
 \input{timed-recall-table.tex}
 
 At five pairs, the pooler scores 42.38\%, 69.15\%, and 63.79\% across seeds, all above the 30.74\% no-query rule. It recalls all five pairs in 0.22\% to 8.23\% of memories, depending on seed (4.57\% on average). At ten and twenty pairs, no model gets every answer right in any tested memory. The pooler's mean per-key lead over the no-query rule is only 0.90 percentage points at twenty pairs, with one seed below the rule. The pooler completes 12,120 updates on average, versus 4,047 for AFT-simple and 3,447 for the Transformer. This is evidence about what the models learn in a minute, not what they can learn after equal updates or longer training.
 
 \paragraph{Five-minute follow-up.}
-We repeat the same experiment from scratch for 300 seconds per model and seed, with the same training streams and held-out examples. Table~\ref{tab:timed-recall-five} gives the results. At ten pairs, it gets every key right in 70.73\% to 76.34\% of trials across seeds. At twenty, it gets every key right in just one of 12,288 trials across seeds. AFT-simple and the Transformer remain near the no-query rule at all loads and do not recover a complete memory on any trial. The pooler averages 59,067 updates, compared with 20,400 for AFT-simple and 16,180 for the Transformer. This comparison measures recall at the same training time, not at the same number of updates. The five-minute runs are new runs, not continuations of the one-minute runs.
+We repeat the same experiment from scratch for 300 seconds per model and seed, with the same training streams and held-out examples. Table~\ref{tab:timed-recall-five} gives the results. At ten pairs, the pooler gets every key right in 70.73\% to 76.34\% of memories per seed. At twenty, it succeeds once across three seeds, each evaluated on the same 4,096 memories. AFT-simple and the Transformer remain near the no-query rule at all loads and do not recover a complete memory on any trial. The pooler averages 59,067 updates, compared with 20,400 for AFT-simple and 16,180 for the Transformer.
 
 
 \begin{table}[htbp]
@@ -153,20 +147,20 @@ Transformer & 5 only & \pmv{99.65}{0.60} & \pmv{98.28}{2.97} \\
 \end{tabular}
 \end{table}
 
-The two Transformer settings finish about 16,100~updates each. The five-only runs see about 1.03~million five-pair training examples, versus about 0.35~million in the mixed runs, counted by replaying the training data generator with the original seeds and recorded update counts. This comparison does not tell us whether the gap comes from seeing fewer five-pair examples, interference from the other loads, or both.
+In the same five minutes, the Transformer sees about 1.03~million five-pair examples per seed when trained only on five pairs, versus 0.35~million in the mixed runs. We count examples by replaying the data generator with the original seeds and update counts. The mixed runs give the Transformer less five-pair practice and also train it on the other loads.
 
 \paragraph{Hiding padding from attention.}
-In a separate Transformer-only control, we keep the mixed training loads and all 41 positions, but disallow attention to padding tokens in both blocks. At 5, 10, and 20 pairs, mean per-key accuracy changes from 30.11\%, 22.60\%, and 16.47\% to 30.14\%, 22.66\%, and 16.39\%, respectively. No seed recovers a complete memory at any load. Masking padding alone does not fix mixed-load recall in this setup. We do not use this control to rank separately tuned models.
+In a separate Transformer-only control, we keep the mixed training loads and all 41 positions, but disallow attention to padding tokens in both blocks. At 5, 10, and 20 pairs, mean per-key accuracy changes from 30.11\%, 22.60\%, and 16.47\% to 30.14\%, 22.66\%, and 16.39\%, respectively. No seed recovers a complete memory at any load. Masking padding alone does not fix mixed-load recall in this setup.
 
-\paragraph{Matching five-pair exposure.}
-We replay the original mixed batches for the same number of updates, starting from the same weights. We set the loss to zero for ten- and twenty-pair examples and still divide by 64. This keeps the same five-pair examples in the same updates. Per-key accuracy at five pairs is \pmv{28.62}{0.28}\%, compared with \pmv{30.11}{0.08}\% in the original mixed runs. Only one of 12,288 memories is fully correct. Removing the other loads from the loss does not restore recall at this exposure. The control does not rule out interference: dropping those losses also changes the size and variability of the overall gradient.
+\paragraph{Same five-pair practice.}
+We start the Transformer from the same weights and replay the same mixed batches for the same number of updates. Only errors on five-pair examples count, and we still divide the loss by 64. The Transformer gets exactly as much five-pair practice as in the mixed run. Per-key accuracy falls from \pmv{30.11}{0.08}\% to \pmv{28.62}{0.28}\%. It recalls one complete memory across three seeds, each tested on the same 4,096 memories. Removing the other loads from the loss does not restore reliable recall. It also changes the size and variability of the gradient, so this test does not rule out interference.
 
 \section{Limitations and conclusion}
-The language results cover only two small English texts. Test windows overlap, and variation across three seeds cannot tell us how the models would compare on new text collections. Model variants were selected through prior exploratory experiments on related tasks. The speed result is measured for particular JAX implementations on one CPU environment with next-character-only supervision; use of accelerator kernels, all-position supervision, or different model widths may change the ranking. The recall experiments use synthetic keys and values, and the multi-query results use teacher forcing. The fixed-length load test does not identify the largest number of pairs either model can learn, especially if the models are not converged at its endpoint.
+The language results cover only two small English texts. Test windows overlap, and variation across three seeds cannot tell us how the models would compare on new text collections. Model variants were selected through prior exploratory experiments on related tasks. The speed result is measured for particular JAX implementations on one CPU environment with next-character-only supervision; use of accelerator kernels, all-position supervision, or different model widths may change the ranking. The recall experiments use synthetic keys and values, and the multi-query results use teacher forcing. The recall scores measure performance within the tested budgets, not the largest load each model can learn. The shared optimizer settings also do not establish how the models compare after separate tuning.
 
 \begin{samepage}
 \paragraph{Conclusion.}
-A single learned pooled representation can retrieve short synthetic associations and make useful language predictions on a short CPU budget. It makes more updates per second, but its perplexity advantage depends on the corpus and baseline. The fixed-update language comparison favors the Transformer on perplexity. In synthetic recall, the pooler performs well at ten pairs in five minutes but still rarely recovers a complete twenty-pair memory. The Transformer also recovers nearly all five-pair memories when trained only on that load. Broader text collections and optimizer settings tuned separately for each model would give a stronger comparison.
+The pooler makes more updates per second in these CPU tests, but whether that gives it lower perplexity depends on the text and baseline. It reliably retrieves short associations in the tested setup, but high per-key accuracy can still hide failures to recover a complete memory.
 
 \end{samepage}
 
@@ -175,6 +169,15 @@ The implementations and fixed-update run records are in the \href{https://github
 
 \paragraph{Use of generative AI.}
 OpenAI's ChatGPT helped draft and revise the manuscript, write experiment and analysis scripts, run additional evaluations, and summarize the results. The author is responsible for the manuscript and its claims.
+
+\appendix
+\section{Early mixed-load recall at equal updates}
+\label{app:early-recall}
+We train the pooler and Transformer separately from the timed runs, on the same task with the same Adam settings and batch size. At 3,000 updates, each has seen 192,000 training examples per seed. The single-query test uses 16,384 held-out examples per load, shared across models and seeds.
+
+\input{recall-table.tex}
+
+At 3,000 updates we also ask every key in the first 4,096 held-out memories per load. The rerun reproduces the single-query scores. Across three seeds, neither model answers every key in any memory. At five pairs, mean per-key accuracy is 30.84\% for the pooler and 30.06\% for the Transformer, versus 30.74\% for the no-query rule on this set. Both models change some answers when the query changes, but neither reliably retrieves the correct values.
 
 \begin{thebibliography}{9}
 \bibitem{vaswani} A. Vaswani et al. Attention is all you need. \emph{NeurIPS}, 2017. \url{https://arxiv.org/abs/1706.03762}
