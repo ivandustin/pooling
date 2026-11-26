@@ -1,4 +1,4 @@
-# One Vector, No Attention: Language Prediction on a One-Minute CPU Budget
+# One Vector, No Attention: Language Prediction with One Minute of CPU Training
 
 Manuscript draft and reproducibility files.
 

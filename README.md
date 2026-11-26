@@ -1,4 +1,4 @@
-# One Vector, No Attention: Language Prediction on a One-Minute CPU Budget
+# One Vector, No Attention: Language Prediction with One Minute of CPU Training
 
 Research preprint by Ivan Dustin Bilon. We compare a simple pooling model with a small Transformer on next-character prediction and synthetic recall.
 
