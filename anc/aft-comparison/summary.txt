@@ -1,0 +1,10 @@
+shakespeare
+  pooler: 99,981 params; 111,508 windows; PPL 7.313 ± 0.068; acc. 43.15% ± 0.16 pp; 14,453 steps; 60.08 s
+  aft_simple: 99,967 params; 111,508 windows; PPL 8.017 ± 0.105; acc. 39.20% ± 0.42 pp; 4,973 steps; 60.17 s
+  transformer: 99,967 params; 111,508 windows; PPL 8.308 ± 0.104; acc. 37.94% ± 0.59 pp; 4,033 steps; 60.17 s
+  paired test PPL differences (pooler minus AFT-simple): -0.611, -0.688, -0.813
+alice
+  pooler: 99,951 params; 14,403 windows; PPL 6.698 ± 0.068; acc. 48.07% ± 0.24 pp; 14,627 steps; 60.05 s
+  aft_simple: 99,967 params; 14,403 windows; PPL 6.482 ± 0.048; acc. 47.44% ± 0.40 pp; 5,000 steps; 60.09 s
+  transformer: 99,967 params; 14,403 windows; PPL 6.685 ± 0.079; acc. 47.06% ± 0.41 pp; 4,267 steps; 60.06 s
+  paired test PPL differences (pooler minus AFT-simple): +0.196, +0.195, +0.257

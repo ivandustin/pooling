@@ -11,7 +11,7 @@ pdflatex -interaction=nonstopmode -halt-on-error last-token-pooling.tex
 pdflatex -interaction=nonstopmode -halt-on-error last-token-pooling.tex
 ```
 
-The two TeX files, both at the archive root, are enough to build the manuscript. The `anc/` folder holds the code and results that arXiv can make available as ancillary files with the TeX submission. This archive is prepared for author review; nothing has been uploaded to arXiv.
+The three TeX files, both at the archive root, are enough to build the manuscript. The `anc/` folder holds the code and results that arXiv can make available as ancillary files with the TeX submission. This archive is prepared for author review; nothing has been uploaded to arXiv.
 
 ## Reproduce the new experiments
 
@@ -46,3 +46,5 @@ python full_test.py --repo "$PWD/llm" --checkpoints one-minute-checkpoints \
 The recall summary script regenerates the fixed test inputs, checks every answer against exact lookup, and computes the query-blind frequency baseline with deterministic tie-breaking.
 
 The optional `--all-keys` flag also scores every key for the first 4,096 held-out memories at each load. The run used for this diagnostic is stored in `all-keys-results.json`. It repeats the original training recipe and saves the ordinary one-query scores as a parity check. The all-key scores use the same set of memories for both models and all seeds.
+
+The [AFT-simple comparison](aft-comparison/README.md) contains the scripts, exact settings, and results for the two-corpus one-minute tests.

@@ -1,0 +1,18 @@
+\begin{table}[htbp]
+\centering\small
+\caption{Fresh one-minute runs, scored on every held-out window. Means and sample standard deviations over three seeds; accuracy deviations are in percentage points.}
+\label{tab:aft}
+\begin{tabular}{llrrr}
+\toprule
+Corpus & Model & Updates & Accuracy (\%) & Perplexity \\
+\midrule
+Shakespeare & Learned-norm pooler & 14,453 & \pmv{43.15}{0.16} & \pmv{7.31}{0.07} \\
+ & AFT-simple & 4,973 & \pmv{39.20}{0.42} & \pmv{8.02}{0.10} \\
+ & Causal Transformer & 4,033 & \pmv{37.94}{0.59} & \pmv{8.31}{0.10} \\
+\midrule
+Alice & Learned-norm pooler & 14,627 & \pmv{48.07}{0.24} & \pmv{6.70}{0.07} \\
+ & AFT-simple & 5,000 & \pmv{47.44}{0.40} & \pmv{6.48}{0.05} \\
+ & Causal Transformer & 4,267 & \pmv{47.06}{0.41} & \pmv{6.69}{0.08} \\
+\bottomrule
+\end{tabular}
+\end{table}
