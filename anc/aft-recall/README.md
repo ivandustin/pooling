@@ -40,3 +40,13 @@ python count-five-pair-examples.py results-300s.json five-pair-control/results.j
 ```
 
 Recorded results are in `five-pair-control/results.json` (Transformer), `five-pair-control/pooler-results.json`, and `padding-control/results.json`. The last command counts training examples from the saved run lengths and original random seeds, without retraining.
+
+### Match five-pair exposure
+
+Replay the original mixed batches, but assign zero loss to ten- and twenty-pair examples. The run matches the original update count for each seed instead of stopping on a timer. Each loss is still divided by the original batch size. The first update with all losses enabled is checked against the original optimizer step.
+
+```sh
+python exposure-control/replay.py results-300s.json matched-exposure.json
+```
+
+Recorded scores and active example counts are in `exposure-control/results.json`. Its `seconds` field describes the reference runs; each replay records its own elapsed time.
