@@ -8,4 +8,4 @@ Research preprint by Ivan Dustin Bilon. We compare a simple pooling model with a
 - [AFT-simple and second-corpus comparison](anc/aft-comparison/README.md)
 - [One- and five-minute recall comparison](anc/aft-recall/README.md)
 
-To prepare the arXiv source archive, put the four TeX files and the `anc/` directory at the root of a ZIP. The draft has not been submitted.
+To make a source archive, put the four TeX files and the `anc/` directory at the root of a ZIP.

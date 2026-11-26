@@ -1,6 +1,6 @@
 # One Vector, No Attention: Language Prediction on a One-Minute CPU Budget
 
-Manuscript draft and reproducibility files. Nothing in this bundle has been submitted to arXiv.
+Manuscript draft and reproducibility files.
 
 ## Build the manuscript
 
@@ -11,7 +11,7 @@ pdflatex -interaction=nonstopmode -halt-on-error last-token-pooling.tex
 pdflatex -interaction=nonstopmode -halt-on-error last-token-pooling.tex
 ```
 
-The four TeX files at the archive root are enough to build the manuscript. The `anc/` folder holds the code and results that arXiv can make available as ancillary files with the TeX submission. This archive is prepared for author review; nothing has been uploaded to arXiv.
+The four TeX files at the archive root are enough to build the manuscript. The `anc/` folder contains the experiment code and results.
 
 ## Reproduce the new experiments
 
