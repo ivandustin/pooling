@@ -14,7 +14,7 @@
 \begin{document}
 \maketitle
 \begin{abstract}
-How much can a small language model do if it stores its context in just one vector? We test a model that turns each earlier token and its position into a vector, adds those vectors, and uses the last token to decide which channels to emphasize. It uses no token-to-token attention. On a one-minute CPU budget, we compare three models of about 100,000 parameters. On Tiny Shakespeare, the pooler reaches mean test perplexity 7.31, versus 8.02 for AFT-simple and 8.31 for a two-block Transformer. On Alice, AFT-simple leads at 6.48, versus 6.70 for the pooler and 6.69 for the Transformer. Lower perplexity means better probabilities for the correct next characters. The pooler makes the most correct top guesses on both texts and completes about 2.9 times as many updates as AFT-simple. In a separate comparison after 50,000 updates, the Transformer reference has lower perplexity. In the harder recall test, the pooler leads at five pairs after one minute, but no model recalls a complete memory of ten or twenty pairs. The evidence is for a small model on a short CPU budget, not a general replacement for attention.
+How much can a small language model do if it stores its context in just one vector? We test a model that turns each earlier token and its position into a vector, adds those vectors, and uses the last token to decide which channels to emphasize. It uses no token-to-token attention. On a one-minute CPU budget, we compare three models of about 100,000 parameters. On Tiny Shakespeare, the pooler reaches mean test perplexity 7.31, versus 8.02 for AFT-simple and 8.31 for a two-block Transformer. On Alice, AFT-simple leads at 6.48, versus 6.70 for the pooler and 6.69 for the Transformer. Lower perplexity means better probabilities for the correct next characters. The pooler makes the most correct top guesses on both texts and completes about 2.9 times as many updates as AFT-simple. In a separate comparison after 50,000 updates, the Transformer reference has lower perplexity. In synthetic recall, the pooler gets every key right in 73.67\% of ten-pair memories after five minutes, but in only one of 12,288 twenty-pair trials. The evidence is for a small model on a short CPU budget, not a general replacement for attention.
 \end{abstract}
 
 \section{Introduction}
@@ -112,17 +112,36 @@ On the same mixed-load task, we train the pooler, AFT-simple, and the softmax Tr
 
 At five pairs, the pooler scores 42.38\%, 69.15\%, and 63.79\% across seeds, all above the 30.74\% no-query rule. It recalls all five pairs in 0.22\% to 8.23\% of memories, depending on seed (4.57\% on average). At ten and twenty pairs, no model gets every answer right in any tested memory. The pooler's mean per-key lead over the no-query rule is only 0.90 percentage points at twenty pairs, with one seed below the rule. The pooler completes 12,120 updates on average, versus 4,047 for AFT-simple and 3,447 for the Transformer. This is evidence about what the models learn in a minute, not what they can learn after equal updates or longer training.
 
+\paragraph{Five-minute follow-up.}
+We repeat the same experiment from scratch for 300 seconds per model and seed, with the same training streams and held-out examples. Table~\ref{tab:timed-recall-five} gives the results. The pooler improves from 58.44\% to 99.99\% per key at five pairs, from 30.30\% to 96.92\% at ten, and from 18.55\% to 62.38\% at twenty. At ten pairs, it gets every key right in 70.73\% to 76.34\% of trials across seeds. At twenty, it gets every key right in just one of 12,288 trials across seeds. AFT-simple and the Transformer remain near the no-query rule at all loads and do not recover a complete memory on any trial. The pooler averages 59,067 updates, compared with 20,400 for AFT-simple and 16,180 for the Transformer. This comparison measures recall at the same training time, not at the same number of updates. The five-minute runs are new runs, not continuations of the one-minute runs.
+
+
+\begin{table}[htbp]
+\centering\small
+\caption{Recall after 300 seconds: mean per-key accuracy (\%) over three seeds, with sample standard deviations in percentage points. The last column counts a memory only when the pooler gets every key right. AFT-simple and the Transformer score zero on that measure at all three loads. Values for the no-query rule are unchanged from Table~\ref{tab:timed-recall}.}
+\label{tab:timed-recall-five}
+\begin{tabular}{rrrrr}
+\toprule
+Pairs & Pooler & AFT-simple & Transformer & Pooler, all keys \\
+\midrule
+5 & \pmv{99.99}{0.00} & \pmv{30.60}{0.16} & \pmv{30.11}{0.08} & \pmv{99.93}{0.02} \\
+10 & \pmv{96.92}{0.25} & \pmv{23.13}{0.12} & \pmv{22.60}{0.11} & \pmv{73.67}{2.82} \\
+20 & \pmv{62.38}{3.27} & \pmv{17.05}{0.04} & \pmv{16.47}{0.18} & \pmv{0.01}{0.01} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 \section{Limitations and conclusion}
 The language results cover only two small English texts. Test windows overlap, and variation across three seeds cannot tell us how the models would compare on new text collections. Model variants were selected through prior exploratory experiments on related tasks. The speed result is measured for particular JAX implementations on one CPU environment with next-character-only supervision; use of accelerator kernels, all-position supervision, or different model widths may change the ranking. The recall experiments use synthetic keys and values, and the multi-query results use teacher forcing. The fixed-length load test does not identify the largest number of pairs either model can learn, especially if the models are not converged at its endpoint.
 
 \begin{samepage}
 \paragraph{Conclusion.}
-A single learned pooled representation can retrieve short synthetic associations and make useful language predictions on a short CPU budget. It makes more updates per second, but its perplexity advantage depends on the corpus and baseline. The fixed-update language comparison favors the Transformer on perplexity. Next steps include longer matched-time runs, broader text collections, and separate tests of recall at equal update counts.
+A single learned pooled representation can retrieve short synthetic associations and make useful language predictions on a short CPU budget. It makes more updates per second, but its perplexity advantage depends on the corpus and baseline. The fixed-update language comparison favors the Transformer on perplexity. In synthetic recall, the pooler performs well at ten pairs in five minutes but still rarely recovers a complete twenty-pair memory. Next steps include broader text collections and tests of recall at higher update counts, with settings tuned separately for each model.
 
 \end{samepage}
 
 \section*{Reproducibility}
-The implementations and fixed-update run records are in the \href{https://github.com/ivandustin/llm/tree/002ccabcb90cef25ab25678a90fea81e36876651}{public source repository at commit \texttt{002ccab}}. The ancillary files accompanying the \LaTeX{} source include the experiment scripts, per-seed results, saved language checkpoints, and exact commands. The ancillary folders include the two-corpus comparison and the three-way time-matched recall test. The CPU runs used Python 3.12, JAX/JAXlib 0.10.1, Flax 0.12.7, Optax 0.2.6, and NumPy 2.3.4.
+The implementations and fixed-update run records are in the \href{https://github.com/ivandustin/llm/tree/002ccabcb90cef25ab25678a90fea81e36876651}{public source repository at commit \texttt{002ccab}}. The ancillary files accompanying the \LaTeX{} source include the experiment scripts, per-seed results, saved language checkpoints, and exact commands. The ancillary folders include the two-corpus comparison and the three-way recall comparison at one and five minutes. The CPU runs used Python 3.12, JAX/JAXlib 0.10.1, Flax 0.12.7, Optax 0.2.6, and NumPy 2.3.4.
 
 \paragraph{Use of generative AI.}
 OpenAI's ChatGPT helped draft and revise the manuscript, write experiment and analysis scripts, run additional evaluations, and summarize the results. The author is responsible for the manuscript and its claims.

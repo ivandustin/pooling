@@ -1,0 +1,18 @@
+pooler: 99,732 parameters, 59,067 steps in 300.06 s
+aft_simple: 99,838 parameters, 20,400 steps in 300.16 s
+transformer: 99,838 parameters, 16,180 steps in 300.25 s
+
+5 pairs: no-query baseline 30.74% on the all-key set
+  pooler: per-key 99.99 ± 0.00%; all keys right 99.93 ± 0.02%; one-query 99.99 ± 0.02%
+  aft_simple: per-key 30.60 ± 0.16%; all keys right 0.00 ± 0.00%; one-query 30.69 ± 0.05%
+  transformer: per-key 30.11 ± 0.08%; all keys right 0.00 ± 0.00%; one-query 30.15 ± 0.13%
+
+10 pairs: no-query baseline 23.47% on the all-key set
+  pooler: per-key 96.92 ± 0.25%; all keys right 73.67 ± 2.82%; one-query 96.80 ± 0.27%
+  aft_simple: per-key 23.13 ± 0.12%; all keys right 0.00 ± 0.00%; one-query 23.06 ± 0.04%
+  transformer: per-key 22.60 ± 0.11%; all keys right 0.00 ± 0.00%; one-query 22.66 ± 0.16%
+
+20 pairs: no-query baseline 17.65% on the all-key set
+  pooler: per-key 62.38 ± 3.27%; all keys right 0.01 ± 0.01%; one-query 62.75 ± 3.75%
+  aft_simple: per-key 17.05 ± 0.04%; all keys right 0.00 ± 0.00%; one-query 17.22 ± 0.09%
+  transformer: per-key 16.47 ± 0.18%; all keys right 0.00 ± 0.00%; one-query 16.40 ± 0.22%
