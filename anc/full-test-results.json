@@ -1,0 +1,47 @@
+{
+  "test_windows": 111508,
+  "runs": [
+    {
+      "model": "learned_norm_pooler",
+      "seed": 0,
+      "loss": 1.9917651401486522,
+      "accuracy": 0.4277002546902464,
+      "perplexity": 7.328458107947211
+    },
+    {
+      "model": "sinusoidal_transformer",
+      "seed": 0,
+      "loss": 2.037356003578507,
+      "accuracy": 0.4087599096018294,
+      "perplexity": 7.670302113438769
+    },
+    {
+      "model": "sinusoidal_transformer",
+      "seed": 1,
+      "loss": 2.04482372471116,
+      "accuracy": 0.40524446676792364,
+      "perplexity": 7.727796198333049
+    },
+    {
+      "model": "learned_norm_pooler",
+      "seed": 1,
+      "loss": 1.9866963196301959,
+      "accuracy": 0.4307762671757938,
+      "perplexity": 7.291405455077168
+    },
+    {
+      "model": "learned_norm_pooler",
+      "seed": 2,
+      "loss": 1.9877159511888627,
+      "accuracy": 0.43512573089247075,
+      "perplexity": 7.298843793724176
+    },
+    {
+      "model": "sinusoidal_transformer",
+      "seed": 2,
+      "loss": 2.0446453526256354,
+      "accuracy": 0.40112817017933805,
+      "perplexity": 7.726417898137438
+    }
+  ]
+}

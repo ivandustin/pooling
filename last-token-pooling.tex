@@ -1,0 +1,120 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern,microtype}
+\usepackage{amsmath,amssymb,booktabs}
+\usepackage[hidelinks]{hyperref}
+\usepackage{url}
+\title{One Vector, No Attention:\\Language Prediction on a One-Minute CPU Budget}
+\author{Ivan Dustin Bilon}
+\date{}
+\newcommand{\pmv}[2]{\ensuremath{#1\,\pm\,#2}}
+\newcommand{\LN}{\operatorname{LN}}
+\newcommand{\gelu}{\operatorname{GELU}}
+\begin{document}
+\maketitle
+\begin{abstract}
+How much can a small language model do if it stores its context in just one vector? We test a model that turns each earlier token and its position into a vector, adds those vectors, and uses the last token to decide which channels to emphasize. It uses no token-to-token attention. On Tiny Shakespeare, at about 100,000 parameters and 60 seconds of CPU training per run, the pooler reaches mean test perplexity 7.40, compared with 7.68 for a two-block Transformer. Lower perplexity means that the model gives better probabilities to the correct next characters. The pooler completes 2.25 times as many updates. Scoring the same checkpoints on all 111,508 test windows gives mean perplexities of 7.31 and 7.71, respectively, with the pooler ahead in all three seeds. In a separate comparison after 50,000 updates, the Transformer reference has lower perplexity. The pooler learns to recall five stored pairs in short synthetic sequences, but that result does not carry over to a harder mix of memory loads at an early training checkpoint. The evidence is for a small model on a short CPU budget, not a general replacement for attention.
+\end{abstract}
+
+\section{Introduction}
+Suppose a model reads a list of key--value pairs and then sees a key. Can it find the right value after adding the whole list into one vector? That is the trade-off we study. A sum is cheap to build, but facts in the sum can get in one another's way. Our model uses the last token to adjust the weight of each coordinate in the sum. In recall, the last token is the key being looked up. In text, it is the last character the model has seen.
+
+Our main question is practical: if both models get one minute on the same CPU and about the same number of parameters, which makes better predictions? We also show results after the same number of updates. These are different tests because one model can fit more updates into a minute. Finally, we vary the number of stored pairs while keeping the input length fixed.
+
+\section{Model}
+Let \(x_0,\ldots,x_{L-1}\) be an observed prefix, \(E\in\mathbb{R}^{V\times d}\) a learned token table, and \(P\in\mathbb{R}^{C\times d}\) a learned absolute position table for maximum context \(C\). Let \(\odot\) denote elementwise multiplication. The pooled representation and output logits are
+\begin{equation}
+\begin{aligned}
+u_i &= \LN_{\mathrm{mem}}(P_i\odot E_{x_i}),
+&\qquad m &= \sum_{i=0}^{L-2}u_i, \\
+z &= \LN_{\mathrm{pool}}\big(E_{x_{L-1}}\odot m\big),
+&\ell &= W_2\gelu(W_1z+b_1)+b_2.
+\end{aligned}
+\end{equation}
+The two layer normalizations act across the \(d\) channels, have separate trainable scales and biases, and use \(\epsilon=10^{-5}\). The memory normalization is shared across positions. The final token uses the same embedding table as the prefix and is excluded from the sum. In other words, the memory is a sum of position-aware features; the last token changes how the readout sees that memory. The implementation multiplies each \(u_i\) by this token before the sum, which is equivalent in exact arithmetic. It does not assign a relevance score to each position or explicitly bind a key embedding to its paired value embedding.
+
+With hidden width \(h\), the model has \(Cd+Vd+4d+dh+h+hV+V\) parameters. Our language configuration has \(C=32\), \(V=65\), \(d=256\), and \(h=230\), totaling 99,981 parameters. For the short retrieval tasks, \(C=16\), \(V=96\), and \(h=198\), totaling 99,686. The pooled feature computation is \(O(Ld)\) for one prefix, plus \(O(dh+hV)\) for the readout. With fixed absolute indices, the sum admits an incremental form, but all timings here use the existing full-prefix implementation. We make no claim about measured incremental generation, moving relative windows, or end-to-end all-position training cost.
+
+\paragraph{Related work.}
+Deep Sets formalizes a sum-and-readout construction for sets \cite{zaheer}; learned absolute positions here make permutation of tokens across fixed positions consequential. Multiplicative binding and addition-based aggregation have precedents in hyperdimensional computing \cite{kanerva}. Related efficient sequence models use linearized attention to summarize past keys and values \cite{katharopoulos}, and BASED studies the recall-throughput trade-off using linear and sliding-window attention \cite{based}. Our model differs by using normalized position--token products and a single channelwise query gate rather than a pairwise score or key--value memory matrix. Our synthetic tasks are inspired by the recall questions raised in Zoology \cite{zoology}; they are not scores on its published benchmark. The contribution here is an empirical characterization of this particular design, not a claim that binding, sum pooling, or the recall-efficiency trade-off is new.
+
+\section{Language prediction with equal elapsed time}
+\paragraph{Data and baseline.}
+We use the Tiny Shakespeare text distributed with \texttt{char-rnn} \cite{shakespeare}, with a contiguous 80/10/10 train/validation/test split and a 65-character vocabulary. Contexts contain 32 characters and predict only the next one. Training windows are randomly sampled within the training split. All reported models are evaluated on the same 4,096 sampled test windows, which may overlap. As a check on the sampled result, we also evaluate the saved checkpoints on every valid window in the same test split. The baseline is a two-block causal pre-layer-normalized Transformer \cite{vaswani} with width 64, four heads, fixed sinusoidal positions, and one GELU feed-forward layer of width 223 per block. It has 99,967 trainable parameters.
+
+\paragraph{Timing protocol.}
+Both models start from random initialization and use Adam (learning rate \(3\times10^{-4}\), \(\beta_1=0.9\), \(\beta_2=0.999\), \(\epsilon=10^{-8}\)), batch size 64, with no learning-rate schedule or weight decay. Within each seed the models receive prefixes of the same random stream of training windows. Runs execute serially on one Linux VM with an AMD EPYC 9V74 host CPU and nine logical CPUs available to the process; JAX uses its CPU backend. Model order reverses for seed 1. The timer includes data generation, input transfer, and synchronized Adam updates in compiled chunks of 20. Compilation, a discarded warm-up update chunk, and held-out evaluation are outside the timer. Training ends at the first completed chunk at or after 60 seconds. We report the final checkpoint, not the best observed checkpoint.
+
+\begin{table}[htbp]
+\centering\small
+\caption{Equal-time language comparison. Mean \(\pm\) sample standard deviation across seeds 0--2. Accuracy deviations are in percentage points; lower perplexity is better.}
+\label{tab:equal}
+\begin{tabular}{lrrrr}
+\toprule
+Model & Seconds & Updates & Accuracy (\%) & Perplexity \\
+\midrule
+Learned-norm pooler & 60.06 & 14,287 & \pmv{43.11}{0.37} & \pmv{7.40}{0.10} \\
+Causal Transformer & 60.07 & 6,340 & \pmv{40.32}{0.50} & \pmv{7.68}{0.13} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The pooler completes 2.25 times as many updates and improves held-out accuracy by 2.78 percentage points (computed before rounding). Its perplexity is lower in each of the three paired runs: 7.28 vs. 7.54, 7.42 vs. 7.76, and 7.48 vs. 7.75. This supports an advantage for the measured implementation and CPU budget. This test does not tell us which operation accounts for the speed difference. It does not match the number of floating-point operations.
+
+\paragraph{Check on the full test split.} We independently reload all six saved checkpoints, verify that they reproduce the sampled results, and score every valid context and target in the same test split (111,508 windows). The pooler reaches \pmv{43.12}{0.37}\% accuracy and \pmv{7.31}{0.02} perplexity, versus \pmv{40.50}{0.38}\% and \pmv{7.71}{0.03} for the Transformer. The pooler leads in each seed. This check removes dependence on which windows were sampled, but it is not a test on a second corpus.
+
+\section{Fixed-update reference and short recall}
+The fixed-update experiments use the same optimizer and batch size, train each task separately, and evaluate seeds 0--2 after 50,000 updates. For indexed copying, the final token requests one of 15 preceding positions. The single- and multi-query recall tasks use five distinct keys drawn from 32 key symbols with values drawn independently from 16 value symbols. Single-query examples predict one associated value. Multi-query examples use prefixes of lengths 11, 13, and 15; prior correct answers are provided, and scores average individual answers. Each synthetic test has 16,384 sequences. The Transformer reference in this set has feed-forward width 200 and has 98,032 retrieval and 94,033 language parameters, so it is not exactly the model from Table~\ref{tab:equal}. These runs do not show what happens when the equal-time runs are continued.
+
+\begin{table}[htbp]
+\centering\small
+\caption{Fixed-update reference (50,000 steps). Three-seed means and sample standard deviations. Rounded near-perfect scores need not indicate zero errors.}
+\label{tab:steps}
+\begin{tabular}{lrr}
+\toprule
+Metric & Learned-norm & Transformer \\
+\midrule
+Position copying (\%) & \pmv{99.99}{0.01} & 100.00 \\
+Single-query recall (\%) & \pmv{99.99}{0.01} & 100.00 \\
+Multi-query recall (\%) & \pmv{99.999}{0.001} & 100.00 \\
+Character accuracy (\%) & \pmv{46.93}{0.62} & \pmv{46.63}{0.72} \\
+Character perplexity & \pmv{6.92}{0.13} & \pmv{6.69}{0.12} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Recall under increased memory load}
+\label{sec:stress}
+We train a separate pair of models from scratch on a mixture of 5, 10, and 20 associations, sampled uniformly for each training example. Every input has length 41: the active key--value pairs come first, unused slots are filled with a dedicated padding token, and the query always occupies the final position. Padding tokens are visible to both models. Keys are sampled without replacement from 32 symbols, values are independent draws from 16 disjoint symbols, and the query uniformly selects a stored key. This holds input length and query location constant across loads, but changes both the number of associations and the amount of padding. It is an in-distribution load test rather than a test of length extrapolation. Evaluation uses 16,384 fresh examples per load, shared across architectures and seeds. The pooler uses 99,732 parameters (readout hidden width 180). The Transformer uses 99,838 parameters (feed-forward width 207). Model widths, Transformer depth, and position encodings otherwise follow the earlier configurations. As a check for answers that do not require recall, we also score a rule that ignores the query and always picks the most common stored value, breaking ties by the lowest symbol index. We report the preselected 3,000-update endpoint using the same Adam setting and batch size as the other experiments.
+
+\input{recall-table.tex}
+
+\paragraph{Does the model use the query?}
+At 3,000 updates, we ask every stored key in the first 4,096 test memories at each load, changing only the query token. This repeat run reproduces the original single-query scores. Both models change their answer for some memories, but neither gets every key right in any tested memory across the three seeds. For five pairs, mean accuracy is 30.84\% for the pooler and 30.06\% for the Transformer, compared with 30.74\% for a rule that sees the memory but not the query. That rule picks the most common stored value and is optimal without the query when all keys are asked. At 10 and 20 pairs, both models score below that rule. Changing the answer is evidence that the query matters, but not that either model retrieves the right value reliably.
+
+\section{Limitations and conclusion}
+All language results come from one small character corpus. Test windows overlap, and variation across three seeds cannot tell us how the models would compare on new text collections. Model variants were selected through prior exploratory experiments on related tasks. The speed result is measured for particular JAX implementations on one CPU environment with next-character-only supervision; use of accelerator kernels, all-position supervision, or different model widths may change the ranking. The recall experiments use synthetic keys and values, and the multi-query results use teacher forcing. The fixed-length load test does not identify the largest number of pairs either model can learn, especially if the models are not converged at its endpoint.
+
+\begin{samepage}
+\paragraph{Conclusion.}
+A single learned pooled representation can retrieve short synthetic associations and offer better character prediction than a small Transformer at a short, equal CPU training budget. The fixed-update language comparison favors the Transformer on perplexity. Taken together, these results distinguish useful progress per elapsed second from final quality at a fixed number of updates. Next steps are longer runs, a second corpus, recall without teacher forcing, and a recurrent or linear-attention baseline.
+
+\end{samepage}
+
+\section*{Reproducibility}
+The implementations and fixed-update run records are in the \href{https://github.com/ivandustin/llm/tree/002ccabcb90cef25ab25678a90fea81e36876651}{public source repository at commit \texttt{002ccab}}. The ancillary files accompanying the \LaTeX{} source include the experiment scripts, per-seed results, saved language checkpoints, and exact commands. The CPU runs used Python 3.12, JAX/JAXlib 0.10.1, Flax 0.12.7, Optax 0.2.6, and NumPy 2.3.4.
+
+\paragraph{Use of generative AI.}
+OpenAI's ChatGPT helped draft and revise the manuscript, write experiment and analysis scripts, run additional evaluations, and summarize the results. The author is responsible for the manuscript and its claims.
+
+\begin{thebibliography}{9}
+\bibitem{vaswani} A. Vaswani et al. Attention is all you need. \emph{NeurIPS}, 2017. \url{https://arxiv.org/abs/1706.03762}
+\bibitem{zaheer} M. Zaheer et al. Deep sets. \emph{NeurIPS}, 2017. \url{https://arxiv.org/abs/1703.06114}
+\bibitem{kanerva} P. Kanerva. Hyperdimensional computing: An introduction to computing in distributed representation with high-dimensional random vectors. \emph{Cognitive Computation}, 1:139--159, 2009. \url{https://doi.org/10.1007/s12559-009-9009-8}
+\bibitem{katharopoulos} A. Katharopoulos et al. Transformers are RNNs: Fast autoregressive Transformers with linear attention. \emph{ICML}, 2020. \url{https://proceedings.mlr.press/v119/katharopoulos20a.html}
+\bibitem{based} S. Arora et al. Simple linear attention language models balance the recall-throughput tradeoff. \emph{ICML}, 2024. \url{https://proceedings.mlr.press/v235/arora24a.html}
+\bibitem{zoology} S. Arora et al. Zoology: Measuring and improving recall in efficient language models. \emph{ICLR}, 2024. \url{https://arxiv.org/abs/2312.04927}
+\bibitem{shakespeare} A. Karpathy. Tiny Shakespeare dataset. \texttt{char-rnn} repository. \url{https://github.com/karpathy/char-rnn/tree/master/data/tinyshakespeare}
+\end{thebibliography}
+\end{document}

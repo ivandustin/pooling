@@ -1,0 +1,107 @@
+{
+  "config": {
+    "task": "Tiny Shakespeare next character",
+    "dataset_sha256": "86c4e6aa9db7c042ec79f339dcb96d42b0075e16b8fc2e86bf0ca57e2dc565ed",
+    "budget_seconds_per_model_seed": 60.0,
+    "chunk_updates": 20,
+    "seeds": [
+      0,
+      1,
+      2
+    ],
+    "batch": 64,
+    "context": 32,
+    "lr": 0.0003,
+    "test_windows": 4096,
+    "devices": [
+      "cpu:0"
+    ],
+    "cpu": "",
+    "cpu_affinity": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "timing": "includes batch creation, transfer and synchronized Adam updates; excludes compile, warmup and held-out eval; overshoot bounded by final chunk"
+  },
+  "runs": [
+    {
+      "model": "learned_norm_pooler",
+      "seed": 0,
+      "parameters": 99981,
+      "updates": 13940,
+      "training_seconds": 60.061249925000084,
+      "compile_and_warmup_seconds": 0.7213153970005806,
+      "last_train_loss": 1.6915500164031982,
+      "loss": 1.9854122027754784,
+      "accuracy": 0.4345703125,
+      "perplexity": 7.282048447469088
+    },
+    {
+      "model": "sinusoidal_transformer",
+      "seed": 0,
+      "parameters": 99967,
+      "updates": 6000,
+      "training_seconds": 60.12069977399915,
+      "compile_and_warmup_seconds": 1.5966871250002441,
+      "last_train_loss": 2.0319406986236572,
+      "loss": 2.0198795311152935,
+      "accuracy": 0.40869140625,
+      "perplexity": 7.537416854763333
+    },
+    {
+      "model": "sinusoidal_transformer",
+      "seed": 1,
+      "parameters": 99967,
+      "updates": 6680,
+      "training_seconds": 60.07938393299992,
+      "compile_and_warmup_seconds": 1.5306334580000112,
+      "last_train_loss": 1.848724126815796,
+      "loss": 2.049118548631668,
+      "accuracy": 0.402099609375,
+      "perplexity": 7.761057096021791
+    },
+    {
+      "model": "learned_norm_pooler",
+      "seed": 1,
+      "parameters": 99981,
+      "updates": 14120,
+      "training_seconds": 60.09852214700004,
+      "compile_and_warmup_seconds": 0.5985553210011858,
+      "last_train_loss": 1.8173549175262451,
+      "loss": 2.004394941031933,
+      "accuracy": 0.42724609375,
+      "perplexity": 7.421602031106718
+    },
+    {
+      "model": "learned_norm_pooler",
+      "seed": 2,
+      "parameters": 99981,
+      "updates": 14800,
+      "training_seconds": 60.01481316600075,
+      "compile_and_warmup_seconds": 0.5957913709989953,
+      "last_train_loss": 1.6971837282180786,
+      "loss": 2.0124633610248566,
+      "accuracy": 0.431396484375,
+      "perplexity": 7.481724855249228
+    },
+    {
+      "model": "sinusoidal_transformer",
+      "seed": 2,
+      "parameters": 99967,
+      "updates": 6340,
+      "training_seconds": 60.02451437499985,
+      "compile_and_warmup_seconds": 1.561788606999471,
+      "last_train_loss": 1.9616479873657227,
+      "loss": 2.047709923237562,
+      "accuracy": 0.39892578125,
+      "perplexity": 7.750132370140805
+    }
+  ]
+}
