@@ -24,3 +24,19 @@ python summarize-300s.py reproduction-300s.json
 ```
 
 Use an otherwise idle CPU for reproducible timing. The exact recorded settings and all per-run scores are in `results.json` (one minute) and `results-300s.json` (five minutes).
+
+## Follow-up controls
+
+The fixed-five controls train the pooler and Transformer on five pairs only. Both use the same five-pair test memories, visible padding, and five-minute budget as the mixed-load comparison. The padding control keeps the mixed loads and ignores padding keys in both Transformer attention blocks, without moving the query or changing position indices. It checks that initial model states match, that the no-padding forward pass matches, and that changing masked token contents leaves predictions unchanged.
+
+From the same directory and environment:
+
+```sh
+export PYTHONPATH="$PWD:$PYTHONPATH"
+python five-pair-control/control.py --out fixed-transformer.json --seconds 300 --seeds 0 1 2
+python five-pair-control/pooler-control.py --out fixed-pooler.json --seconds 300 --seeds 0 1 2
+python padding-control/compare.py --out masked-transformer.json --seconds 300 --seeds 0 1 2
+python count-five-pair-examples.py results-300s.json five-pair-control/results.json
+```
+
+Recorded results are in `five-pair-control/results.json` (Transformer), `five-pair-control/pooler-results.json`, and `padding-control/results.json`. The last command counts training examples from the saved run lengths and original random seeds, without retraining.
