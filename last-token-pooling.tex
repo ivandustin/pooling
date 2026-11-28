@@ -179,9 +179,11 @@ We train the pooler and Transformer separately from the timed runs, on the same 
 
 At 3,000 updates we also ask every key in the first 4,096 held-out memories per load. The rerun reproduces the single-query scores. Across three seeds, neither model answers every key in any memory. At five pairs, mean per-key accuracy is 30.84\% for the pooler and 30.06\% for the Transformer, versus 30.74\% for the no-query rule on this set. Both models change some answers when the query changes, but neither reliably retrieves the correct values.
 
-\section{Weight tying at equal parameter counts}
+\section{Weight tying at fixed hidden width}
 \label{app:weight-tying}
-We compare three pooler readouts: untied, tied to the first $h$ coordinates of the input embeddings (hidden width $h$), and tied with learned LayerNorm after GELU. To match sizes, the untied layer is narrower and has one partially connected unit; LayerNorm replaces two input weights per hidden unit with its learned scale and bias. Each variant has 85,031 language or 80,678 retrieval parameters. We train three paired seeds with Adam ($3\times10^{-4}$) and batches of 64.
+We compare three readouts at the same hidden width within each task: an untied output matrix, an output matrix tied to the first $h$ coordinates of the input embeddings, and the same tied readout with learned LayerNorm after GELU, before the vocabulary projection. Here $h$ is the hidden width. The untied output matrix starts as a copy of the tied weights and is then trained separately. The two tied variants start from the same shared weights; LayerNorm changes the hidden activations from the first forward pass. We use three paired seeds, Adam ($3\times10^{-4}$), and batches of 64.
+
+Hidden widths are 207 for Shakespeare, 198 for Alice, and 181 for mixed recall. In untied, tied, and tied-with-LayerNorm order, parameter counts are 99,967 / 86,512 / 86,926 for Shakespeare, 99,727 / 85,669 / 86,065 for Alice, and 100,085 / 82,709 / 83,071 for recall. LayerNorm adds $2h$ parameters for scale and bias.
 
 \begin{table}[htbp]
 \centering\small
@@ -191,17 +193,17 @@ We compare three pooler readouts: untied, tied to the first $h$ coordinates of t
 \toprule
 Corpus & Updates & Untied & Tied & Tied + LayerNorm \\
 \midrule
-Shakespeare & 10,000 & \textbf{7.909} & 7.991 & 7.939 \\
-Shakespeare & 50,000 & 7.138 & 7.068 & \textbf{6.647} \\
-Alice       & 10,000 & 6.682 & 6.681 & 6.769 \\
-Alice       & 50,000 & 8.845 & \textbf{8.348} & 9.501 \\
+Shakespeare & 10,000 & 7.711 & 7.879 & 7.832 \\
+Shakespeare & 50,000 & 6.984 & 7.026 & 6.618 \\
+Alice       & 10,000 & 6.617 & 6.747 & 6.753 \\
+Alice       & 50,000 & 10.190 & 8.549 & 9.772 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-At 50,000 updates, tied with LayerNorm ranks first on Shakespeare and last on Alice. All three variants worsen on Alice between 10,000 and 50,000 updates. These equal-update runs compare designs at fixed size, not CPU speed or the effect of tying or normalization alone.
+At 50,000 updates, tied with LayerNorm has the lowest perplexity on Shakespeare, and plain tying has the lowest on Alice. On Alice, all three worsen from 10,000 to 50,000 updates.
 
-Rounded to two decimals, mean accuracy across variants and budgets is at least 99.99\% on indexed copying and 99.94\% on teacher-forced multi-query recall. Single-query recall ranges from 99.67\% to 100\%, and all variants exceed 99.99\% at 50,000 updates. These short tests are near ceiling and do not establish a recall benefit from tying.
+On mixed recall, each load uses the same 4,096 held-out memories per seed. At 10,000 updates, complete recall is below 1\% for five pairs and zero for ten and twenty pairs in all three variants. At 50,000 updates, all three exceed 99.7\% on five pairs. On ten pairs, complete recall is 80.8\% untied, 57.4\% tied, and 82.3\% tied with LayerNorm. Adding LayerNorm improves this result over plain tying in all three seeds. On twenty pairs, per-key accuracy is 70.2\%, 56.3\%, and 64.8\%, respectively, while complete recall stays below 0.1\%. We did not test LayerNorm on the untied readout, so these results do not show whether its benefit is specific to tying.
 
 \begin{thebibliography}{9}
 \bibitem{vaswani} A. Vaswani et al. Attention is all you need. \emph{NeurIPS}, 2017. \url{https://arxiv.org/abs/1706.03762}
